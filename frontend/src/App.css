@@ -1,0 +1,36 @@
+/* Base app layout */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  padding-bottom: 60px; /* space for bottom nav */
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background: #111;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid #333;
+}
+
+.nav-item {
+  color: white;
+  font-size: 14px;
+  text-decoration: none;
+  padding: 0.5rem;
+}
+
+.nav-item.active {
+  color: #00ffff; /* Cyan highlight */
+  font-weight: bold;
+}
