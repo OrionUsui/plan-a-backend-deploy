@@ -33,10 +33,10 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     setItinerary('');
 
     try {
-      const response = await fetch('https://planamvp-1fvfprrsu-orionus-projects.vercel.app/api/itinerary', {
+      const response = await fetch('/api/itinerary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify({ ... })
           location: trip.location,
           startDate: trip.startDate,
           endDate: trip.endDate,

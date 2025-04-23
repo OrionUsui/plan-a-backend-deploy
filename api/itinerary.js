@@ -1,11 +1,10 @@
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', 'https://planamvp-bz1hktnn1-orionus-projects.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Origin', '*'); // or restrict to your frontend domain
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200).end(); // handle preflight
   }
 
   try {
