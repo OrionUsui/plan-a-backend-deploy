@@ -6,7 +6,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load trips on mount
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -17,7 +16,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  // Generate itinerary when trip changes
   useEffect(() => {
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (trip) {
@@ -36,7 +34,7 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
       const response = await fetch('/api/itinerary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ... })
+        body: JSON.stringify({
           location: trip.location,
           startDate: trip.startDate,
           endDate: trip.endDate,
@@ -110,7 +108,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
   );
 }
 
-// ---------- STYLES ----------
+// Styles below...
 
 const outerContainer = {
   display: 'flex',
