@@ -33,8 +33,7 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     setItinerary('');
 
     try {
-      const response = await fetch('https://super-duper-space-waffle-pjrrwprgqq7vc7g9v-3001.app.github.dev/api/itinerary', {
- 
+      const response = await fetch('https://planamvp-1fvfprrsu-orionus-projects.vercel.app/api/itinerary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -51,7 +50,7 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
       setItinerary(data.itinerary || '⚠️ No itinerary found in response.');
     } catch (err) {
       console.error(err);
-      setItinerary(`⚠️ Error connecting to the backend. Here's a sample itinerary:
+      setItinerary(`⚠️ Error connecting to the itinerary API. Here's a sample itinerary:
 
 Day 1: Explore the city center and visit local museums.
 Day 2: Take a guided tour or day trip to nearby attractions.
