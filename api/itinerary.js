@@ -1,45 +1,36 @@
-// /api/itinerary.js
-
-import { OpenAI } from 'openai';
-
-// api/itinerary.js
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', 'https://planamvp.vercel.app'); // Your frontend domain
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Content-Type, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-
-  const { location, startDate, endDate, userInput } = req.body;
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: 'OpenAI API key not configured.' });
-  }
-
-  if (!location || !startDate || !endDate) {
-    return res.status(400).json({ error: 'Missing required fields.' });
-  }
-
-  const prompt = `
-You are a travel planner. Generate a detailed 3-day itinerary for a trip to ${location}
-from ${startDate} to ${endDate}.
-Include morning, afternoon, and evening activities.
-User preferences: ${userInput || 'None'}
-`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4',
         messages: [
-          { role: 'system', content: 'You are a helpful travel assistant.' },
-          { role: 'user', content: prompt }
+          {
+            role: 'system',
+            content: 'You are a helpful travel planner assistant.',
+          },
+          {
+            role: 'user',
+            content: `Create a day-by-day itinerary for a trip to ${req.body.location} from ${req.body.startDate} to ${req.body.endDate}. Notes: ${req.body.userInput || 'none'}`,
+          },
         ],
-        temperature: 0.7,
-      })
+      }),
     });
 
     const data = await response.json();
@@ -50,8 +41,7 @@ User preferences: ${userInput || 'None'}
 
     res.status(200).json({ itinerary: data.choices[0].message.content });
   } catch (error) {
-    console.error('❌ OpenAI error:', error.message);
+    console.error('X OpenAI error:', error.message);
     res.status(500).json({ error: 'Failed to generate itinerary.' });
   }
 }
-
