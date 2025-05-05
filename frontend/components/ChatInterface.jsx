@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
-function ChatInterface({ location }) {
+function ChatInterface({ location, initialMessage = '', updateItinerary }) {
   const [messages, setMessages] = useState([
     {
       role: 'system',
       content: `You are a helpful travel planner. The user's trip location is ${location}.`,
     },
+    ...(initialMessage
+      ? [{ role: 'assistant', content: initialMessage }]
+      : []),
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,6 +43,11 @@ function ChatInterface({ location }) {
     setLoading(false);
   };
 
+  const lastAssistantReply = messages
+    .slice()
+    .reverse()
+    .find(msg => msg.role === 'assistant');
+
   return (
     <div style={chatContainerStyle}>
       <h3 style={{ marginBottom: '0.5rem' }}>💬 Customize Your Trip</h3>
@@ -52,7 +61,7 @@ function ChatInterface({ location }) {
               backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
             }}
           >
-            {msg.content}
+            <ReactMarkdown>{msg.content}</ReactMarkdown>
           </div>
         ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
@@ -68,6 +77,16 @@ function ChatInterface({ location }) {
           Send
         </button>
       </div>
+
+      {/* ✅ Update Itinerary Button */}
+      {lastAssistantReply && updateItinerary && (
+        <button
+          onClick={() => updateItinerary(lastAssistantReply.content)}
+          style={{ ...buttonStyle, marginTop: '1rem', backgroundColor: '#2255aa' }}
+        >
+          Use This Itinerary ✨
+        </button>
+      )}
     </div>
   );
 }
@@ -93,6 +112,8 @@ const bubbleStyle = {
   borderRadius: '8px',
   maxWidth: '80%',
   color: 'white',
+  wordWrap: 'break-word',
+  lineHeight: '1.4',
 };
 
 const inputRowStyle = {
