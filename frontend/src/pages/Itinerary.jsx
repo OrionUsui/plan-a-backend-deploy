@@ -20,9 +20,10 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (trip) {
       setLocation(trip.location);
-      // No automatic generation
+      // Removed: generateItinerary(trip);
     }
   }, [selectedTripId]);
+  
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -72,7 +73,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
             const trip = savedTrips.find(t => t.id === tripId);
             if (trip) {
               setLocation(trip.location);
-              generateItinerary(trip);
+              // Removed: generateItinerary(trip);
             }
           }}
           style={inputStyle}
