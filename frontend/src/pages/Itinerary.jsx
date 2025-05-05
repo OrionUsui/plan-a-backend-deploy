@@ -103,8 +103,14 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {itinerary && <pre style={itineraryStyle}>{itinerary}</pre>}
 
-        {/* ✅ Show ChatInterface after itinerary is generated */}
-        {itinerary && <ChatInterface location={location} />}
+        {/* ✅ Chat appears after itinerary is generated */}
+        {itinerary && (
+          <ChatInterface
+            location={location}
+            initialMessage={itinerary}
+            updateItinerary={setItinerary}
+          />
+        )}
       </div>
     </div>
   );
