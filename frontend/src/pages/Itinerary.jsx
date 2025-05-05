@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ChatInterface from '../components/ChatInterface';
 
 function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId }) {
   const [savedTrips, setSavedTrips] = useState([]);
@@ -20,10 +21,8 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (trip) {
       setLocation(trip.location);
-      // Removed: generateItinerary(trip);
     }
   }, [selectedTripId]);
-  
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -73,7 +72,6 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
             const trip = savedTrips.find(t => t.id === tripId);
             if (trip) {
               setLocation(trip.location);
-              // Removed: generateItinerary(trip);
             }
           }}
           style={inputStyle}
@@ -104,13 +102,15 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
         </button>
 
         {itinerary && <pre style={itineraryStyle}>{itinerary}</pre>}
+
+        {/* ✅ Show ChatInterface after itinerary is generated */}
+        {itinerary && <ChatInterface location={location} />}
       </div>
     </div>
   );
 }
 
-// Styles below...
-
+// ---------- STYLES ----------
 const outerContainer = {
   display: 'flex',
   justifyContent: 'center',
