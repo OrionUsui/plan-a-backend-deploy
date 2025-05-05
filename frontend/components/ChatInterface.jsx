@@ -4,7 +4,7 @@ function ChatInterface({ location, onUpdateItinerary }) {
   const [messages, setMessages] = useState([
     {
       role: 'system',
-      content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide answer in a mark down format which is easy to understand`,
+      content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -41,25 +41,32 @@ function ChatInterface({ location, onUpdateItinerary }) {
     setLoading(false);
   };
 
+  const formatAssistantText = (text) => {
+    // Basic formatting: adds line breaks before each "Day" and formats bold titles
+    return text
+      .replace(/(\*\*.*?\*\*)/g, '\n\n$1') // bold day headers on new lines
+      .replace(/(?:Day \d+|Morning|Afternoon|Evening):/g, (match) => `\n${match}`); // add breaks before segments
+  };
+
   return (
     <div style={chatContainerStyle}>
       <h3 style={{ marginBottom: '0.5rem' }}>💬 Customize Your Trip</h3>
       <div style={chatBoxStyle}>
-      {messages.slice(1).map((msg, index) => (
-  <div
-    key={index}
-    style={{
-      ...bubbleStyle,
-      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-      backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
-      whiteSpace: 'pre-wrap',
-    }}
-  >
-    {msg.role === 'assistant'
-      ? formatAssistantText(msg.content)
-      : msg.content}
-  </div>
-))}
+        {messages.slice(1).map((msg, index) => (
+          <div
+            key={index}
+            style={{
+              ...bubbleStyle,
+              alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {msg.role === 'assistant'
+              ? formatAssistantText(msg.content)
+              : msg.content}
+          </div>
+        ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
       </div>
 
