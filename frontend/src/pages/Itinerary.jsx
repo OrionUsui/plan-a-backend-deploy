@@ -20,7 +20,7 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (trip) {
       setLocation(trip.location);
-      generateItinerary(trip);
+      // No automatic generation
     }
   }, [selectedTripId]);
 
