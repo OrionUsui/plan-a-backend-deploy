@@ -4,7 +4,7 @@ function ChatInterface({ location, onUpdateItinerary }) {
   const [messages, setMessages] = useState([
     {
       role: 'system',
-      content: `You are a helpful travel planner. The user's trip location is ${location}.`,
+      content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide answer in a mark down format which is easy to understand`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -45,18 +45,21 @@ function ChatInterface({ location, onUpdateItinerary }) {
     <div style={chatContainerStyle}>
       <h3 style={{ marginBottom: '0.5rem' }}>💬 Customize Your Trip</h3>
       <div style={chatBoxStyle}>
-        {messages.slice(1).map((msg, index) => (
-          <div
-            key={index}
-            style={{
-              ...bubbleStyle,
-              alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
-            }}
-          >
-            {msg.content}
-          </div>
-        ))}
+      {messages.slice(1).map((msg, index) => (
+  <div
+    key={index}
+    style={{
+      ...bubbleStyle,
+      alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+      backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
+      whiteSpace: 'pre-wrap',
+    }}
+  >
+    {msg.role === 'assistant'
+      ? formatAssistantText(msg.content)
+      : msg.content}
+  </div>
+))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
       </div>
 
