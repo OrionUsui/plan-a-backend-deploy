@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 
-function ChatInterface({ location }) {
-  const [messages, setMessages] = useState([]); // Start empty
+function ChatInterface({ location, onUpdateItinerary }) {
+  const [messages, setMessages] = useState([
+    {
+      role: 'system',
+      content: `You are a helpful travel planner. The user's trip location is ${location}.`,
+    },
+  ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const newMessages = [
-      ...messages,
-      { role: 'user', content: input }
-    ];
-
+    const newMessages = [...messages, { role: 'user', content: input }];
     setMessages(newMessages);
     setInput('');
     setLoading(true);
@@ -21,16 +23,12 @@ function ChatInterface({ location }) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: `You are a helpful travel assistant. The trip location is ${location}.` },
-            ...newMessages
-          ]
-        }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
       const data = await res.json();
       if (data.reply) {
+        setLastAssistantMessage(data.reply);
         setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
       } else {
         setMessages([...newMessages, { role: 'assistant', content: '⚠️ No response received.' }]);
@@ -47,7 +45,7 @@ function ChatInterface({ location }) {
     <div style={chatContainerStyle}>
       <h3 style={{ marginBottom: '0.5rem' }}>💬 Customize Your Trip</h3>
       <div style={chatBoxStyle}>
-        {messages.map((msg, index) => (
+        {messages.slice(1).map((msg, index) => (
           <div
             key={index}
             style={{
@@ -61,27 +59,86 @@ function ChatInterface({ location }) {
         ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
       </div>
+
       <div style={inputRowStyle}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask to modify your plan..."
+          placeholder="Ask to change days, add sights, etc."
           style={inputStyle}
         />
         <button onClick={sendMessage} style={buttonStyle} disabled={loading}>
           Send
         </button>
       </div>
+
+      {lastAssistantMessage && (
+        <div style={{ marginTop: '1rem', textAlign: 'right' }}>
+          <button
+            onClick={() => onUpdateItinerary(lastAssistantMessage)}
+            style={updateButtonStyle}
+          >
+            📋 Use This Itinerary
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-// Styles remain unchanged...
-const chatContainerStyle = { marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #444' };
-const chatBoxStyle = { maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' };
-const bubbleStyle = { padding: '0.6rem', borderRadius: '8px', maxWidth: '80%', color: 'white' };
-const inputRowStyle = { display: 'flex', gap: '0.5rem' };
-const inputStyle = { flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #444', background: '#1e1e1e', color: 'white' };
-const buttonStyle = { padding: '0.5rem 1rem', borderRadius: '6px', border: 'none', background: '#444', color: 'white', cursor: 'pointer' };
+// ---------- STYLES ----------
+const chatContainerStyle = {
+  marginTop: '2rem',
+  paddingTop: '1rem',
+  borderTop: '1px solid #444',
+};
+
+const chatBoxStyle = {
+  maxHeight: '300px',
+  overflowY: 'auto',
+  marginBottom: '1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem',
+};
+
+const bubbleStyle = {
+  padding: '0.6rem',
+  borderRadius: '8px',
+  maxWidth: '80%',
+  color: 'white',
+};
+
+const inputRowStyle = {
+  display: 'flex',
+  gap: '0.5rem',
+};
+
+const inputStyle = {
+  flex: 1,
+  padding: '0.5rem',
+  borderRadius: '6px',
+  border: '1px solid #444',
+  background: '#1e1e1e',
+  color: 'white',
+};
+
+const buttonStyle = {
+  padding: '0.5rem 1rem',
+  borderRadius: '6px',
+  border: 'none',
+  background: '#444',
+  color: 'white',
+  cursor: 'pointer',
+};
+
+const updateButtonStyle = {
+  padding: '0.4rem 0.8rem',
+  backgroundColor: '#2255aa',
+  color: 'white',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+};
 
 export default ChatInterface;
