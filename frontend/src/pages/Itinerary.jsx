@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ChatInterface from '../components/ChatInterface';
+import ChatInterface from '../../components/ChatInterface';
 
 function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId }) {
   const [savedTrips, setSavedTrips] = useState([]);
