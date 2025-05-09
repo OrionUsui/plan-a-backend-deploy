@@ -12,7 +12,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const chatEndRef = useRef(null);
 
-  // Load saved chat or itinerary on trip change
   useEffect(() => {
     if (!selectedTripId) return;
 
@@ -49,7 +48,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
     }
   }, [selectedTripId, location]);
 
-  // Save chat messages to localStorage on change
   useEffect(() => {
     if (!selectedTripId || messages.length === 0) return;
 
@@ -57,7 +55,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
     localStorage.setItem(key, JSON.stringify(messages));
   }, [messages, selectedTripId]);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -149,7 +146,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
           <button
             onClick={() => {
               handleUseThisItinerary();
-              onUpdateItinerary(lastAssistantMessage);
+              onUpdateItinerary(lastAssistantMessage.content); // ✅ FIXED LINE
             }}
             style={updateButtonStyle}
           >
@@ -212,8 +209,3 @@ const updateButtonStyle = {
   backgroundColor: '#2255aa',
   color: 'white',
   border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-};
-
-export default ChatInterface;
