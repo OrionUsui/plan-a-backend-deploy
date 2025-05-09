@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-function ChatInterface({ location, onUpdateItinerary }) {
+function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
   const [messages, setMessages] = useState([
     {
       role: 'system',
@@ -10,6 +10,59 @@ function ChatInterface({ location, onUpdateItinerary }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
+  const chatEndRef = useRef(null);
+
+  // Load saved chat or itinerary on trip change
+  useEffect(() => {
+    if (!selectedTripId) return;
+
+    const chatKey = `chat_${selectedTripId}`;
+    const itineraryKey = `itinerary_${selectedTripId}`;
+
+    const savedChat = localStorage.getItem(chatKey);
+    const savedItinerary = localStorage.getItem(itineraryKey);
+
+    if (savedChat) {
+      const parsedMessages = JSON.parse(savedChat);
+      setMessages(parsedMessages);
+      const assistantMsgs = parsedMessages.filter((msg) => msg.role === 'assistant');
+      setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
+    } else if (savedItinerary) {
+      const parsed = JSON.parse(savedItinerary);
+      const newMessages = [
+        {
+          role: 'system',
+          content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
+        },
+        { role: 'assistant', content: parsed.content },
+      ];
+      setMessages(newMessages);
+      setLastAssistantMessage({ role: 'assistant', content: parsed.content });
+    } else {
+      setMessages([
+        {
+          role: 'system',
+          content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
+        },
+      ]);
+      setLastAssistantMessage(null);
+    }
+  }, [selectedTripId, location]);
+
+  // Save chat messages to localStorage on change
+  useEffect(() => {
+    if (!selectedTripId || messages.length === 0) return;
+
+    const key = `chat_${selectedTripId}`;
+    localStorage.setItem(key, JSON.stringify(messages));
+  }, [messages, selectedTripId]);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -28,8 +81,9 @@ function ChatInterface({ location, onUpdateItinerary }) {
 
       const data = await res.json();
       if (data.reply) {
-        setLastAssistantMessage(data.reply);
-        setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+        const assistantMsg = { role: 'assistant', content: data.reply };
+        setLastAssistantMessage(assistantMsg);
+        setMessages([...newMessages, assistantMsg]);
       } else {
         setMessages([...newMessages, { role: 'assistant', content: '⚠️ No response received.' }]);
       }
@@ -41,11 +95,18 @@ function ChatInterface({ location, onUpdateItinerary }) {
     setLoading(false);
   };
 
+  const handleUseThisItinerary = () => {
+    if (!lastAssistantMessage || !selectedTripId) return;
+
+    const key = `itinerary_${selectedTripId}`;
+    localStorage.setItem(key, JSON.stringify(lastAssistantMessage));
+    alert('Itinerary saved for this trip!');
+  };
+
   const formatAssistantText = (text) => {
-    // Basic formatting: adds line breaks before each "Day" and formats bold titles
     return text
-      .replace(/(\*\*.*?\*\*)/g, '\n\n$1') // bold day headers on new lines
-      .replace(/(?:Day \d+|Morning|Afternoon|Evening):/g, (match) => `\n${match}`); // add breaks before segments
+      .replace(/(\*\*.*?\*\*)/g, '\n\n$1')
+      .replace(/(?:Day \d+|Morning|Afternoon|Evening):/g, (match) => `\n${match}`);
   };
 
   return (
@@ -68,6 +129,7 @@ function ChatInterface({ location, onUpdateItinerary }) {
           </div>
         ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
+        <div ref={chatEndRef} />
       </div>
 
       <div style={inputRowStyle}>
@@ -85,7 +147,10 @@ function ChatInterface({ location, onUpdateItinerary }) {
       {lastAssistantMessage && (
         <div style={{ marginTop: '1rem', textAlign: 'right' }}>
           <button
-            onClick={() => onUpdateItinerary(lastAssistantMessage)}
+            onClick={() => {
+              handleUseThisItinerary();
+              onUpdateItinerary(lastAssistantMessage);
+            }}
             style={updateButtonStyle}
           >
             📋 Use This Itinerary
@@ -104,7 +169,7 @@ const chatContainerStyle = {
 };
 
 const chatBoxStyle = {
-  maxHeight: '300px',
+  maxHeight: '50vh',
   overflowY: 'auto',
   marginBottom: '1rem',
   display: 'flex',
