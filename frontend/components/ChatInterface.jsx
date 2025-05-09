@@ -74,7 +74,7 @@ function ChatInterface({ location, onUpdateItinerary }) {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask to change suggestions, add sights, etc."
+          placeholder="Ask to suggest new locations, add sights, etc."
           style={inputStyle}
         />
         <button onClick={sendMessage} style={buttonStyle} disabled={loading}>
