@@ -209,3 +209,9 @@ const updateButtonStyle = {
   backgroundColor: '#2255aa',
   color: 'white',
   border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+};
+
+// ✅ Close the component and export
+export default ChatInterface;
