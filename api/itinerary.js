@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -6,11 +7,17 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // Restrict to POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // CORS headers for actual request
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   try {
+    const { location, startDate, endDate, userInput } = req.body;
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -26,7 +33,7 @@ export default async function handler(req, res) {
           },
           {
             role: 'user',
-            content: `Create a day-by-day itinerary for a trip to ${req.body.location} from ${req.body.startDate} to ${req.body.endDate}. Notes: ${req.body.userInput || 'none'}`,
+            content: `Create a day-by-day itinerary for a trip to ${location} from ${startDate} to ${endDate}. Notes: ${userInput || 'none'}`,
           },
         ],
       }),
@@ -38,9 +45,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Invalid response from OpenAI' });
     }
 
-    res.status(200).json({ itinerary: data.choices[0].message.content });
+    return res.status(200).json({ itinerary: data.choices[0].message.content });
   } catch (error) {
-    console.error('X OpenAI error:', error.message);
-    res.status(500).json({ error: 'Failed to generate itinerary.' });
+    console.error('OpenAI error:', error);
+    return res.status(500).json({ error: 'Failed to generate itinerary.' });
   }
 }
