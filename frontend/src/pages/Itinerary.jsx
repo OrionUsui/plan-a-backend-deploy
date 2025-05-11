@@ -137,12 +137,13 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
         {itinerary && <pre style={itineraryStyle}>{itinerary}</pre>}
 
         {itinerary && (
-          <ChatInterface
-            location={location}
-            selectedTripId={selectedTripId}
-            initialMessages={chatMessages}
-            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
-          />
+<ChatInterface
+  key={selectedTripId} // ✅ This forces a fresh remount on trip switch
+  location={location}
+  selectedTripId={selectedTripId}
+  initialMessages={chatMessages}
+  onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
+/>
         )}
       </div>
     </div>
