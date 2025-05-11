@@ -17,12 +17,27 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
+  // ✅ Unified effect to set location + load itinerary on trip change
   useEffect(() => {
     const trip = savedTrips.find(t => t.id === selectedTripId);
-    if (trip) {
-      setLocation(trip.location);
+    if (!trip) return;
+
+    setLocation(trip.location);
+
+    const itineraryKey = `itinerary_${selectedTripId}`;
+    const saved = localStorage.getItem(itineraryKey);
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setItinerary(parsed.content || '');
+      } catch {
+        setItinerary('');
+      }
+    } else {
+      setItinerary('');
     }
-  }, [selectedTripId]);
+  }, [selectedTripId, savedTrips]);
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -105,12 +120,12 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {/* ✅ Chat appears after itinerary is generated */}
         {itinerary && (
-<ChatInterface
-  location={location}
-  selectedTripId={selectedTripId} // ✅ required!
-  onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
-/>
-)}
+          <ChatInterface
+            location={location}
+            selectedTripId={selectedTripId}
+            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
+          />
+        )}
       </div>
     </div>
   );
