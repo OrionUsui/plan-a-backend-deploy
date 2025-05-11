@@ -10,6 +10,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -17,7 +18,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
 
     const chatKey = `chat_${selectedTripId}`;
     const itineraryKey = `itinerary_${selectedTripId}`;
-
     const savedChat = localStorage.getItem(chatKey);
     const savedItinerary = localStorage.getItem(itineraryKey);
 
@@ -50,7 +50,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
 
   useEffect(() => {
     if (!selectedTripId || messages.length === 0) return;
-
     const key = `chat_${selectedTripId}`;
     localStorage.setItem(key, JSON.stringify(messages));
   }, [messages, selectedTripId]);
@@ -95,9 +94,17 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
   const handleUseThisItinerary = () => {
     if (!lastAssistantMessage || !selectedTripId) return;
 
-    const key = `itinerary_${selectedTripId}`;
-    localStorage.setItem(key, JSON.stringify(lastAssistantMessage));
-    alert('Itinerary saved for this trip!');
+    // Save assistant reply
+    const itineraryKey = `itinerary_${selectedTripId}`;
+    localStorage.setItem(itineraryKey, JSON.stringify(lastAssistantMessage));
+
+    // ✅ Save full chat history
+    const chatKey = `chat_${selectedTripId}`;
+    localStorage.setItem(chatKey, JSON.stringify(messages));
+
+    // ✅ Feedback
+    setSaveStatus('✔ Itinerary and chat history saved!');
+    setTimeout(() => setSaveStatus(''), 3000);
   };
 
   const formatAssistantText = (text) => {
@@ -146,12 +153,15 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
           <button
             onClick={() => {
               handleUseThisItinerary();
-              onUpdateItinerary(lastAssistantMessage.content); // ✅ FIXED LINE
+              onUpdateItinerary(lastAssistantMessage.content);
             }}
             style={updateButtonStyle}
           >
             📋 Use This Itinerary
           </button>
+          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#2ecc71' }}>
+            {saveStatus}
+          </div>
         </div>
       )}
     </div>
@@ -213,5 +223,4 @@ const updateButtonStyle = {
   cursor: 'pointer',
 };
 
-// ✅ Close the component and export
 export default ChatInterface;
