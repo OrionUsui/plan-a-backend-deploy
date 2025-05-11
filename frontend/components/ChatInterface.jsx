@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
-  const [messages, setMessages] = useState([]);
+function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMessages = [] }) {
+  const [messages, setMessages] = useState(initialMessages.length > 0 ? initialMessages : [
+  {
+    role: 'system',
+    content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
+  },
+]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
