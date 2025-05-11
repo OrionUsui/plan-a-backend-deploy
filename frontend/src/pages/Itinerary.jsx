@@ -6,6 +6,8 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [userInput, setUserInput] = useState('');
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
@@ -17,27 +19,41 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  // ✅ Unified effect to set location + load itinerary on trip change
-  useEffect(() => {
-    const trip = savedTrips.find(t => t.id === selectedTripId);
-    if (!trip) return;
+useEffect(() => {
+  const trip = savedTrips.find(t => t.id === selectedTripId);
+  if (!trip) return;
 
-    setLocation(trip.location);
+  setLocation(trip.location);
 
-    const itineraryKey = `itinerary_${selectedTripId}`;
-    const saved = localStorage.getItem(itineraryKey);
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setItinerary(parsed.content || '');
-      } catch {
-        setItinerary('');
-      }
-    } else {
+  // Load itinerary
+  const itineraryKey = `itinerary_${selectedTripId}`;
+  const savedItinerary = localStorage.getItem(itineraryKey);
+  if (savedItinerary) {
+    try {
+      const parsed = JSON.parse(savedItinerary);
+      setItinerary(parsed.content || '');
+    } catch {
       setItinerary('');
     }
-  }, [selectedTripId, savedTrips]);
+  } else {
+    setItinerary('');
+  }
+
+  // Load chat
+  const chatKey = `chat_${selectedTripId}`;
+  const savedChat = localStorage.getItem(chatKey);
+  if (savedChat) {
+    try {
+      const parsed = JSON.parse(savedChat);
+      setChatMessages(parsed);
+    } catch {
+      setChatMessages([]);
+    }
+  } else {
+    setChatMessages([]);
+  }
+}, [selectedTripId, savedTrips]);
+
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -120,11 +136,12 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {/* ✅ Chat appears after itinerary is generated */}
         {itinerary && (
-          <ChatInterface
-            location={location}
-            selectedTripId={selectedTripId}
-            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
-          />
+<ChatInterface
+  location={location}
+  selectedTripId={selectedTripId}
+  initialMessages={chatMessages} // ✅ add this
+  onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
+/>
         )}
       </div>
     </div>
