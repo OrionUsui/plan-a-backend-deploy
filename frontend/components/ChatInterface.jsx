@@ -13,45 +13,37 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
+  // Load messages from backend when trip changes
   useEffect(() => {
     if (!selectedTripId || !location) return;
 
-    const chatKey = `chat_${selectedTripId}`;
-    const savedChat = localStorage.getItem(chatKey);
-    const itineraryKey = `itinerary_${selectedTripId}`;
-    const savedItinerary = localStorage.getItem(itineraryKey);
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/itinerary-store?tripId=${selectedTripId}`);
+        const data = await res.json();
 
-    if (savedChat) {
-      try {
-        const parsed = JSON.parse(savedChat);
-        setMessages(parsed);
-        const assistantMsgs = parsed.filter((m) => m.role === 'assistant');
-        setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
-      } catch {
+        if (res.ok) {
+          const newMessages = data.chatHistory?.length > 0
+            ? data.chatHistory
+            : [systemMessage];
+
+          setMessages(newMessages);
+          const assistantMsgs = newMessages.filter((m) => m.role === 'assistant');
+          setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
+        } else {
+          console.warn('Failed to load chat:', data.error);
+          setMessages([systemMessage]);
+        }
+      } catch (err) {
+        console.error('Error loading chat:', err);
         setMessages([systemMessage]);
-        setLastAssistantMessage(null);
       }
-    } else if (savedItinerary) {
-      try {
-        const parsed = JSON.parse(savedItinerary);
-        const newMessages = [systemMessage, { role: 'assistant', content: parsed.content }];
-        setMessages(newMessages);
-        setLastAssistantMessage({ role: 'assistant', content: parsed.content });
-      } catch {
-        setMessages([systemMessage]);
-        setLastAssistantMessage(null);
-      }
-    } else {
-      setMessages([systemMessage]);
-      setLastAssistantMessage(null);
-    }
+    };
+
+    fetchData();
   }, [selectedTripId, location]);
 
-  useEffect(() => {
-    if (!selectedTripId || messages.length === 0) return;
-    localStorage.setItem(`chat_${selectedTripId}`, JSON.stringify(messages));
-  }, [messages, selectedTripId]);
-
+  // Auto-scroll
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -76,8 +68,20 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
       const data = await res.json();
       if (data.reply) {
         const assistantMsg = { role: 'assistant', content: data.reply };
-        setMessages([...newMessages, assistantMsg]);
+        const updatedMessages = [...newMessages, assistantMsg];
+        setMessages(updatedMessages);
         setLastAssistantMessage(assistantMsg);
+
+        // Auto-save reply to backend
+        await fetch('/api/itinerary-store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripId: selectedTripId,
+            itinerary: assistantMsg.content,
+            chatHistory: updatedMessages,
+          }),
+        });
       } else {
         setMessages([...newMessages, { role: 'assistant', content: '⚠️ No response received.' }]);
       }
@@ -89,13 +93,27 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
     setLoading(false);
   };
 
-  const handleUseThisItinerary = () => {
+  const handleUseThisItinerary = async () => {
     if (!lastAssistantMessage || !selectedTripId) return;
-    localStorage.setItem(`itinerary_${selectedTripId}`, JSON.stringify(lastAssistantMessage));
-    localStorage.setItem(`chat_${selectedTripId}`, JSON.stringify(messages));
-    onUpdateItinerary(lastAssistantMessage.content);
-    setSaveStatus('✔ Itinerary and chat history saved!');
-    setTimeout(() => setSaveStatus(''), 3000);
+
+    try {
+      await fetch('/api/itinerary-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripId: selectedTripId,
+          itinerary: lastAssistantMessage.content,
+          chatHistory: messages,
+        }),
+      });
+
+      onUpdateItinerary(lastAssistantMessage.content);
+      setSaveStatus('✔ Itinerary and chat history saved!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (err) {
+      console.error('Failed to save itinerary:', err);
+      setSaveStatus('⚠️ Save failed');
+    }
   };
 
   const formatAssistantText = (text) => {
@@ -118,7 +136,9 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
               whiteSpace: 'pre-wrap',
             }}
           >
-            {msg.role === 'assistant' ? formatAssistantText(msg.content) : msg.content}
+            {msg.role === 'assistant'
+              ? formatAssistantText(msg.content)
+              : msg.content}
           </div>
         ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}

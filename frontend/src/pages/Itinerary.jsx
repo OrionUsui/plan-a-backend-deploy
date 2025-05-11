@@ -8,6 +8,7 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
 
+  // Load trips and set default selected
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -18,27 +19,31 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
+  // Load itinerary and chat from backend when trip changes
   useEffect(() => {
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (!trip) return;
 
     setLocation(trip.location);
+    setItinerary('');
+    setChatMessages([]);
 
-    const itineraryKey = `itinerary_${trip.id}`;
-    try {
-      const savedItinerary = JSON.parse(localStorage.getItem(itineraryKey));
-      setItinerary(savedItinerary?.content || '');
-    } catch {
-      setItinerary('');
-    }
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/itinerary-store?tripId=${trip.id}`);
+        const data = await res.json();
+        if (res.ok) {
+          setItinerary(data.itinerary || '');
+          setChatMessages(data.chatHistory || []);
+        } else {
+          console.warn('Failed to load trip data', data.error);
+        }
+      } catch (err) {
+        console.error('Error fetching itinerary:', err);
+      }
+    };
 
-    const chatKey = `chat_${trip.id}`;
-    try {
-      const savedChat = JSON.parse(localStorage.getItem(chatKey));
-      setChatMessages(savedChat || []);
-    } catch {
-      setChatMessages([]);
-    }
+    fetchData();
   }, [selectedTripId, savedTrips]);
 
   const generateItinerary = async (trip) => {
@@ -126,7 +131,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
             location={location}
             selectedTripId={selectedTripId}
             initialMessages={chatMessages}
-            onUpdateItinerary={(newItin) => setItinerary(newItin)}
+            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
           />
         )}
       </div>
