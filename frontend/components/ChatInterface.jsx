@@ -6,56 +6,56 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
     content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
   };
 
-  const [messages, setMessages] = useState(initialMessages.length > 0 ? initialMessages : [systemMessage]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
-  // When location or selectedTripId changes, reset messages if no initialMessages
+  // 🔄 Sync initialMessages and trip changes
   useEffect(() => {
     if (!selectedTripId || !location) return;
 
-    const chatKey = `chat_${selectedTripId}`;
-    const itineraryKey = `itinerary_${selectedTripId}`;
-    const savedChat = localStorage.getItem(chatKey);
-    const savedItinerary = localStorage.getItem(itineraryKey);
-
-    if (savedChat) {
-      try {
-        const parsedMessages = JSON.parse(savedChat);
-        setMessages(parsedMessages);
-        const assistantMsgs = parsedMessages.filter((msg) => msg.role === 'assistant');
-        setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
-      } catch {
-        setMessages([systemMessage]);
-        setLastAssistantMessage(null);
-      }
-    } else if (savedItinerary) {
-      try {
-        const parsed = JSON.parse(savedItinerary);
-        const newMessages = [systemMessage, { role: 'assistant', content: parsed.content }];
-        setMessages(newMessages);
-        setLastAssistantMessage({ role: 'assistant', content: parsed.content });
-      } catch {
-        setMessages([systemMessage]);
-        setLastAssistantMessage(null);
-      }
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+      const assistantMsgs = initialMessages.filter((m) => m.role === 'assistant');
+      setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
     } else {
+      const chatKey = `chat_${selectedTripId}`;
+      const itineraryKey = `itinerary_${selectedTripId}`;
+
+      try {
+        const savedChat = JSON.parse(localStorage.getItem(chatKey));
+        if (savedChat && savedChat.length > 0) {
+          setMessages(savedChat);
+          const assistantMsgs = savedChat.filter((msg) => msg.role === 'assistant');
+          setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
+          return;
+        }
+      } catch {}
+
+      try {
+        const savedItinerary = JSON.parse(localStorage.getItem(itineraryKey));
+        if (savedItinerary?.content) {
+          const newMessages = [systemMessage, { role: 'assistant', content: savedItinerary.content }];
+          setMessages(newMessages);
+          setLastAssistantMessage({ role: 'assistant', content: savedItinerary.content });
+          return;
+        }
+      } catch {}
+
+      // Default fallback
       setMessages([systemMessage]);
       setLastAssistantMessage(null);
     }
-  }, [selectedTripId, location]);
+  }, [initialMessages, selectedTripId, location]);
 
-  // Save chat history per trip
   useEffect(() => {
     if (!selectedTripId || messages.length === 0) return;
-    const key = `chat_${selectedTripId}`;
-    localStorage.setItem(key, JSON.stringify(messages));
+    localStorage.setItem(`chat_${selectedTripId}`, JSON.stringify(messages));
   }, [messages, selectedTripId]);
 
-  // Auto-scroll
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -96,11 +96,8 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
   const handleUseThisItinerary = () => {
     if (!lastAssistantMessage || !selectedTripId) return;
 
-    const itineraryKey = `itinerary_${selectedTripId}`;
-    localStorage.setItem(itineraryKey, JSON.stringify(lastAssistantMessage));
-
-    const chatKey = `chat_${selectedTripId}`;
-    localStorage.setItem(chatKey, JSON.stringify(messages));
+    localStorage.setItem(`itinerary_${selectedTripId}`, JSON.stringify(lastAssistantMessage));
+    localStorage.setItem(`chat_${selectedTripId}`, JSON.stringify(messages));
 
     setSaveStatus('✔ Itinerary and chat history saved!');
     setTimeout(() => setSaveStatus(''), 3000);
