@@ -8,7 +8,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
 
-  // Load trips from localStorage
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -19,7 +18,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  // Load itinerary and chat when trip changes
   useEffect(() => {
     const trip = savedTrips.find(t => t.id === selectedTripId);
     if (!trip) return;
@@ -28,20 +26,20 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
 
     const itineraryKey = `itinerary_${trip.id}`;
     try {
-      const savedItinerary = localStorage.getItem(itineraryKey);
-      setItinerary(savedItinerary ? JSON.parse(savedItinerary).content : '');
+      const savedItinerary = JSON.parse(localStorage.getItem(itineraryKey));
+      setItinerary(savedItinerary?.content || '');
     } catch {
       setItinerary('');
     }
 
     const chatKey = `chat_${trip.id}`;
     try {
-      const savedChat = localStorage.getItem(chatKey);
-      setChatMessages(savedChat ? JSON.parse(savedChat) : []);
+      const savedChat = JSON.parse(localStorage.getItem(chatKey));
+      setChatMessages(savedChat || []);
     } catch {
       setChatMessages([]);
     }
-  }, [selectedTripId]);
+  }, [selectedTripId, savedTrips]);
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -128,7 +126,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
             location={location}
             selectedTripId={selectedTripId}
             initialMessages={chatMessages}
-            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
+            onUpdateItinerary={(newItin) => setItinerary(newItin)}
           />
         )}
       </div>
