@@ -1,20 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'system',
-      content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
+  // ✅ Load messages and itinerary when trip ID and location are both ready
   useEffect(() => {
-    if (!selectedTripId) return;
+    if (!selectedTripId || !location) return;
 
     const chatKey = `chat_${selectedTripId}`;
     const itineraryKey = `itinerary_${selectedTripId}`;
@@ -94,15 +90,12 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary }) {
   const handleUseThisItinerary = () => {
     if (!lastAssistantMessage || !selectedTripId) return;
 
-    // Save assistant reply
     const itineraryKey = `itinerary_${selectedTripId}`;
     localStorage.setItem(itineraryKey, JSON.stringify(lastAssistantMessage));
 
-    // ✅ Save full chat history
     const chatKey = `chat_${selectedTripId}`;
     localStorage.setItem(chatKey, JSON.stringify(messages));
 
-    // ✅ Feedback
     setSaveStatus('✔ Itinerary and chat history saved!');
     setTimeout(() => setSaveStatus(''), 3000);
   };
