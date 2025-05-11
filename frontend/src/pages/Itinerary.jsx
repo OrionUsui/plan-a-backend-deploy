@@ -8,7 +8,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
 
-
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -19,41 +18,44 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-useEffect(() => {
-  const trip = savedTrips.find(t => t.id === selectedTripId);
-  if (!trip) return;
+  useEffect(() => {
+    const trip = savedTrips.find(t => t.id === selectedTripId);
+    if (!trip) return;
 
-  setLocation(trip.location);
+    setLocation(trip.location);
 
-  // Load itinerary
-  const itineraryKey = `itinerary_${selectedTripId}`;
-  const savedItinerary = localStorage.getItem(itineraryKey);
-  if (savedItinerary) {
-    try {
-      const parsed = JSON.parse(savedItinerary);
-      setItinerary(parsed.content || '');
-    } catch {
+    // Load itinerary
+    const itineraryKey = `itinerary_${selectedTripId}`;
+    const savedItinerary = localStorage.getItem(itineraryKey);
+    if (savedItinerary) {
+      try {
+        const parsed = JSON.parse(savedItinerary);
+        setItinerary(parsed.content || '');
+      } catch {
+        setItinerary('');
+      }
+    } else {
       setItinerary('');
     }
-  } else {
-    setItinerary('');
-  }
 
-  // Load chat
-  const chatKey = `chat_${selectedTripId}`;
-  const savedChat = localStorage.getItem(chatKey);
-  if (savedChat) {
-    try {
-      const parsed = JSON.parse(savedChat);
-      setChatMessages(parsed);
-    } catch {
+    // Load chat
+    const chatKey = `chat_${selectedTripId}`;
+    const savedChat = localStorage.getItem(chatKey);
+    if (savedChat) {
+      try {
+        const parsed = JSON.parse(savedChat);
+        if (Array.isArray(parsed)) {
+          setChatMessages(parsed);
+        } else {
+          setChatMessages([]);
+        }
+      } catch {
+        setChatMessages([]);
+      }
+    } else {
       setChatMessages([]);
     }
-  } else {
-    setChatMessages([]);
-  }
-}, [selectedTripId, savedTrips]);
-
+  }, [selectedTripId, savedTrips]);
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -134,14 +136,13 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {itinerary && <pre style={itineraryStyle}>{itinerary}</pre>}
 
-        {/* ✅ Chat appears after itinerary is generated */}
         {itinerary && (
-<ChatInterface
-  location={location}
-  selectedTripId={selectedTripId}
-  initialMessages={chatMessages} // ✅ add this
-  onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
-/>
+          <ChatInterface
+            location={location}
+            selectedTripId={selectedTripId}
+            initialMessages={chatMessages}
+            onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
+          />
         )}
       </div>
     </div>

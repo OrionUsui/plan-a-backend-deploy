@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMessages = [] }) {
-  const [messages, setMessages] = useState(initialMessages.length > 0 ? initialMessages : [
-  {
+  const systemMessage = {
     role: 'system',
     content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
-  },
-]);
+  };
+
+  const [messages, setMessages] = useState(initialMessages.length > 0 ? initialMessages : [systemMessage]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
-  // ✅ Load messages and itinerary when trip ID and location are both ready
+  // When location or selectedTripId changes, reset messages if no initialMessages
   useEffect(() => {
     if (!selectedTripId || !location) return;
 
@@ -23,38 +23,39 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
     const savedItinerary = localStorage.getItem(itineraryKey);
 
     if (savedChat) {
-      const parsedMessages = JSON.parse(savedChat);
-      setMessages(parsedMessages);
-      const assistantMsgs = parsedMessages.filter((msg) => msg.role === 'assistant');
-      setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
+      try {
+        const parsedMessages = JSON.parse(savedChat);
+        setMessages(parsedMessages);
+        const assistantMsgs = parsedMessages.filter((msg) => msg.role === 'assistant');
+        setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
+      } catch {
+        setMessages([systemMessage]);
+        setLastAssistantMessage(null);
+      }
     } else if (savedItinerary) {
-      const parsed = JSON.parse(savedItinerary);
-      const newMessages = [
-        {
-          role: 'system',
-          content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
-        },
-        { role: 'assistant', content: parsed.content },
-      ];
-      setMessages(newMessages);
-      setLastAssistantMessage({ role: 'assistant', content: parsed.content });
+      try {
+        const parsed = JSON.parse(savedItinerary);
+        const newMessages = [systemMessage, { role: 'assistant', content: parsed.content }];
+        setMessages(newMessages);
+        setLastAssistantMessage({ role: 'assistant', content: parsed.content });
+      } catch {
+        setMessages([systemMessage]);
+        setLastAssistantMessage(null);
+      }
     } else {
-      setMessages([
-        {
-          role: 'system',
-          content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
-        },
-      ]);
+      setMessages([systemMessage]);
       setLastAssistantMessage(null);
     }
   }, [selectedTripId, location]);
 
+  // Save chat history per trip
   useEffect(() => {
     if (!selectedTripId || messages.length === 0) return;
     const key = `chat_${selectedTripId}`;
     localStorage.setItem(key, JSON.stringify(messages));
   }, [messages, selectedTripId]);
 
+  // Auto-scroll
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
