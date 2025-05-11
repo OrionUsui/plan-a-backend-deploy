@@ -18,44 +18,29 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  useEffect(() => {
-    const trip = savedTrips.find(t => t.id === selectedTripId);
-    if (!trip) return;
+useEffect(() => {
+  const trip = savedTrips.find(t => t.id === selectedTripId);
+  if (!trip) return;
 
-    setLocation(trip.location);
+  setLocation(trip.location);
 
-    // Load itinerary
-    const itineraryKey = `itinerary_${selectedTripId}`;
-    const savedItinerary = localStorage.getItem(itineraryKey);
-    if (savedItinerary) {
-      try {
-        const parsed = JSON.parse(savedItinerary);
-        setItinerary(parsed.content || '');
-      } catch {
-        setItinerary('');
-      }
-    } else {
-      setItinerary('');
-    }
+  const itineraryKey = `itinerary_${trip.id}`;
+  const savedItinerary = localStorage.getItem(itineraryKey);
+  try {
+    setItinerary(savedItinerary ? JSON.parse(savedItinerary).content : '');
+  } catch {
+    setItinerary('');
+  }
 
-    // Load chat
-    const chatKey = `chat_${selectedTripId}`;
+  const chatKey = `chat_${trip.id}`;
+  try {
     const savedChat = localStorage.getItem(chatKey);
-    if (savedChat) {
-      try {
-        const parsed = JSON.parse(savedChat);
-        if (Array.isArray(parsed)) {
-          setChatMessages(parsed);
-        } else {
-          setChatMessages([]);
-        }
-      } catch {
-        setChatMessages([]);
-      }
-    } else {
-      setChatMessages([]);
-    }
-  }, [selectedTripId, savedTrips]);
+    setChatMessages(savedChat ? JSON.parse(savedChat) : []);
+  } catch {
+    setChatMessages([]);
+  }
+}, [selectedTripId]);
+
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -138,12 +123,13 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {itinerary && (
 <ChatInterface
-  key={selectedTripId} // ✅ This forces a fresh remount on trip switch
+  key={selectedTripId} // ✅ THIS forces a remount per trip
   location={location}
   selectedTripId={selectedTripId}
   initialMessages={chatMessages}
   onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
 />
+
         )}
       </div>
     </div>
