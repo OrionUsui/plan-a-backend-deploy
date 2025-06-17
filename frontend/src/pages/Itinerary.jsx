@@ -7,8 +7,9 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
+  const [reloadToggle, setReloadToggle] = useState(false); // 🔁 triggers refresh
 
-  // Load trips and set default selected
+  // Load trips from localStorage and set initial selection
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -19,9 +20,9 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  // Load itinerary and chat from backend when trip changes
+  // Load itinerary + chat when tripId or reloadToggle changes
   useEffect(() => {
-    const trip = savedTrips.find(t => t.id === selectedTripId);
+    const trip = savedTrips.find((t) => t.id === selectedTripId);
     if (!trip) return;
 
     setLocation(trip.location);
@@ -36,15 +37,22 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
           setItinerary(data.itinerary || '');
           setChatMessages(data.chatHistory || []);
         } else {
-          console.warn('Failed to load trip data', data.error);
+          console.warn('⚠️ Failed to load itinerary:', data.error);
         }
       } catch (err) {
-        console.error('Error fetching itinerary:', err);
+        console.error('❌ Error loading itinerary:', err);
       }
     };
 
     fetchData();
-  }, [selectedTripId, savedTrips]);
+  }, [selectedTripId, savedTrips, reloadToggle]);
+
+  // Force refresh on window refocus
+  useEffect(() => {
+    const handleFocus = () => setReloadToggle(prev => !prev);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   const generateItinerary = async (trip) => {
     if (!trip) return;
@@ -60,14 +68,26 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
           location: trip.location,
           startDate: trip.startDate,
           endDate: trip.endDate,
-          userInput: userInput || ''
-        })
+          userInput: userInput || '',
+        }),
       });
 
       if (!response.ok) throw new Error(`Server returned status ${response.status}`);
 
       const data = await response.json();
-      setItinerary(data.itinerary || '⚠️ No itinerary found in response.');
+      const generated = data.itinerary || '⚠️ No itinerary found in response.';
+      setItinerary(generated);
+
+      // Save to Upstash
+      await fetch('/api/itinerary-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripId: trip.id,
+          itinerary: generated,
+          chatHistory: [], // optional reset
+        }),
+      });
     } catch (err) {
       console.error(err);
       setItinerary(`⚠️ Error connecting to the itinerary API. Here's a sample itinerary:
@@ -91,7 +111,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
           onChange={(e) => {
             const tripId = e.target.value;
             setSelectedTripId(tripId);
-            const trip = savedTrips.find(t => t.id === tripId);
+            const trip = savedTrips.find((t) => t.id === tripId);
             if (trip) {
               setLocation(trip.location);
             }
@@ -99,7 +119,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
           style={inputStyle}
         >
           <option value="">-- Select a trip --</option>
-          {savedTrips.map(trip => (
+          {savedTrips.map((trip) => (
             <option key={trip.id} value={trip.id}>
               {trip.location} ({trip.startDate} → {trip.endDate})
             </option>
@@ -116,7 +136,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
         />
 
         <button
-          onClick={() => generateItinerary(savedTrips.find(t => t.id === selectedTripId))}
+          onClick={() => generateItinerary(savedTrips.find((t) => t.id === selectedTripId))}
           disabled={loading || !selectedTripId}
           style={buttonStyle}
         >
@@ -127,7 +147,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
 
         {itinerary && (
           <ChatInterface
-            key={selectedTripId}
+            key={selectedTripId} // force remount on trip change
             location={location}
             selectedTripId={selectedTripId}
             initialMessages={chatMessages}

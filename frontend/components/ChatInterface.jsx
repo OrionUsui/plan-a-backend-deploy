@@ -13,7 +13,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
-  // Load messages from backend when trip changes
+  // Load messages when trip changes
   useEffect(() => {
     if (!selectedTripId || !location) return;
 
@@ -23,11 +23,9 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
         const data = await res.json();
 
         if (res.ok) {
-          const newMessages = data.chatHistory?.length > 0
-            ? data.chatHistory
-            : [systemMessage];
-
+          const newMessages = data.chatHistory?.length > 0 ? data.chatHistory : [systemMessage];
           setMessages(newMessages);
+
           const assistantMsgs = newMessages.filter((m) => m.role === 'assistant');
           setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
         } else {
@@ -43,7 +41,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
     fetchData();
   }, [selectedTripId, location]);
 
-  // Auto-scroll
+  // Scroll to bottom on message update
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -72,7 +70,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
         setMessages(updatedMessages);
         setLastAssistantMessage(assistantMsg);
 
-        // Auto-save reply to backend
+        // Save to backend
         await fetch('/api/itinerary-store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
