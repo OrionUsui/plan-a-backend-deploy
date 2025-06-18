@@ -1,19 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
-function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMessages = [] }) {
+function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMessages = [], initialItinerary = '' }) {
   const systemMessage = {
     role: 'system',
-    content: `You are a helpful travel planner. The user's trip location is ${location}. Please provide the itinerary in a clearly structured markdown-style format.`,
+    content: `You are a helpful travel planner. Please respond ONLY with a structured itinerary in this format:
+
+Day 1:
+- Morning: ...
+- Afternoon: ...
+- Evening: ...
+
+Day 2:
+- Morning: ...
+- Afternoon: ...
+- Evening: ...
+
+For any recommended restaurants, landmarks, or attractions, include clickable Markdown links like [Shibuya Crossing](https://maps.google.com/...).
+
+Do NOT include any explanations, greetings, or follow-up questions. Only provide the formatted itinerary. The user's trip location is ${location}, and here is the original itinerary to use as context: \n\n${initialItinerary}`,
   };
 
-  const [messages, setMessages] = useState(initialMessages.length > 0 ? initialMessages : [systemMessage]);
+  const [messages, setMessages] = useState([systemMessage, ...initialMessages]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastAssistantMessage, setLastAssistantMessage] = useState(null);
   const [saveStatus, setSaveStatus] = useState('');
   const chatEndRef = useRef(null);
 
-  // Load messages when trip changes
   useEffect(() => {
     if (!selectedTripId || !location) return;
 
@@ -23,10 +39,9 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
         const data = await res.json();
 
         if (res.ok) {
-          const newMessages = data.chatHistory?.length > 0 ? data.chatHistory : [systemMessage];
-          setMessages(newMessages);
-
-          const assistantMsgs = newMessages.filter((m) => m.role === 'assistant');
+          const history = data.chatHistory?.length ? data.chatHistory : [];
+          const assistantMsgs = history.filter((m) => m.role === 'assistant');
+          setMessages([systemMessage, ...history]);
           setLastAssistantMessage(assistantMsgs[assistantMsgs.length - 1] || null);
         } else {
           console.warn('Failed to load chat:', data.error);
@@ -39,14 +54,20 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
     };
 
     fetchData();
-  }, [selectedTripId, location]);
+  }, [selectedTripId, location, initialItinerary]);
 
-  // Scroll to bottom on message update
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  const stripFluff = (text) => {
+    return text
+      .replace(/^.*?(Day\s*\d+:)/is, '$1')
+      .replace(/(Let me know.*|Please let me know.*|If you have questions.*)/gi, '')
+      .trim();
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -65,18 +86,18 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
 
       const data = await res.json();
       if (data.reply) {
-        const assistantMsg = { role: 'assistant', content: data.reply };
+        const cleanReply = stripFluff(data.reply);
+        const assistantMsg = { role: 'assistant', content: cleanReply };
         const updatedMessages = [...newMessages, assistantMsg];
+
         setMessages(updatedMessages);
         setLastAssistantMessage(assistantMsg);
 
-        // Save to backend
         await fetch('/api/itinerary-store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tripId: selectedTripId,
-            itinerary: assistantMsg.content,
             chatHistory: updatedMessages,
           }),
         });
@@ -101,7 +122,7 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
         body: JSON.stringify({
           tripId: selectedTripId,
           itinerary: lastAssistantMessage.content,
-          chatHistory: messages,
+          chatHistory: messages.slice(1), // omit system message
         }),
       });
 
@@ -112,12 +133,6 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
       console.error('Failed to save itinerary:', err);
       setSaveStatus('⚠️ Save failed');
     }
-  };
-
-  const formatAssistantText = (text) => {
-    return text
-      .replace(/(\*\*.*?\*\*)/g, '\n\n$1')
-      .replace(/(?:Day \d+|Morning|Afternoon|Evening):/g, (match) => `\n${match}`);
   };
 
   return (
@@ -131,12 +146,30 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
               ...bubbleStyle,
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
               backgroundColor: msg.role === 'user' ? '#333' : '#2b2b2b',
-              whiteSpace: 'pre-wrap',
             }}
           >
-            {msg.role === 'assistant'
-              ? formatAssistantText(msg.content)
-              : msg.content}
+            {msg.role === 'assistant' ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  a: ({ node, ...props }) => (
+                    <a
+                      {...props}
+                      style={{ color: '#4ea1ff', textDecoration: 'underline' }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  ),
+                  p: ({ node, ...props }) => <p style={{ marginBottom: '0.8rem' }} {...props} />,
+                  li: ({ node, ...props }) => <li style={{ marginBottom: '0.3rem' }} {...props} />,
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            ) : (
+              <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+            )}
           </div>
         ))}
         {loading && <div style={{ color: '#888' }}>Loading...</div>}
@@ -160,7 +193,9 @@ function ChatInterface({ location, selectedTripId, onUpdateItinerary, initialMes
           <button onClick={handleUseThisItinerary} style={updateButtonStyle}>
             📋 Use This Itinerary
           </button>
-          {saveStatus && <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#2ecc71' }}>{saveStatus}</div>}
+          {saveStatus && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#2ecc71' }}>{saveStatus}</div>
+          )}
         </div>
       )}
     </div>
@@ -188,6 +223,7 @@ const bubbleStyle = {
   borderRadius: '8px',
   maxWidth: '80%',
   color: 'white',
+  wordBreak: 'break-word',
 };
 
 const inputRowStyle = {

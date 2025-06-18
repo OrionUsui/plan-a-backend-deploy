@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import ChatInterface from '../../components/ChatInterface';
 
 function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId }) {
@@ -7,9 +10,8 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
-  const [reloadToggle, setReloadToggle] = useState(false); // 🔁 triggers refresh
+  const [reloadToggle, setReloadToggle] = useState(false);
 
-  // Load trips from localStorage and set initial selection
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('planA_trips')) || [];
     setSavedTrips(stored);
@@ -20,7 +22,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     }
   }, [setLocation, selectedTripId, setSelectedTripId]);
 
-  // Load itinerary + chat when tripId or reloadToggle changes
   useEffect(() => {
     const trip = savedTrips.find((t) => t.id === selectedTripId);
     if (!trip) return;
@@ -47,7 +48,6 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
     fetchData();
   }, [selectedTripId, savedTrips, reloadToggle]);
 
-  // Force refresh on window refocus
   useEffect(() => {
     const handleFocus = () => setReloadToggle(prev => !prev);
     window.addEventListener('focus', handleFocus);
@@ -78,22 +78,21 @@ function Itinerary({ location, setLocation, selectedTripId, setSelectedTripId })
       const generated = data.itinerary || '⚠️ No itinerary found in response.';
       setItinerary(generated);
 
-      // Save to Upstash
       await fetch('/api/itinerary-store', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tripId: trip.id,
           itinerary: generated,
-          chatHistory: [], // optional reset
+          chatHistory: [],
         }),
       });
     } catch (err) {
       console.error(err);
       setItinerary(`⚠️ Error connecting to the itinerary API. Here's a sample itinerary:
 
-Day 1: Explore the city center and visit local museums.
-Day 2: Take a guided tour or day trip to nearby attractions.
+Day 1: Explore the city center and visit local museums.  
+Day 2: Take a guided tour or day trip to nearby attractions.  
 Day 3: Enjoy local food, shopping, and scenic areas.`);
     }
 
@@ -112,9 +111,7 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
             const tripId = e.target.value;
             setSelectedTripId(tripId);
             const trip = savedTrips.find((t) => t.id === tripId);
-            if (trip) {
-              setLocation(trip.location);
-            }
+            if (trip) setLocation(trip.location);
           }}
           style={inputStyle}
         >
@@ -143,13 +140,35 @@ Day 3: Enjoy local food, shopping, and scenic areas.`);
           {loading ? 'Generating...' : 'Generate Plan'}
         </button>
 
-        {itinerary && <pre style={itineraryStyle}>{itinerary}</pre>}
+        {itinerary && (
+          <div style={markdownContainer}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                a: ({ node, ...props }) => (
+                  <a
+                    {...props}
+                    style={{ color: '#4ea1ff', textDecoration: 'underline' }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                ),
+                p: ({ node, ...props }) => <p style={{ marginBottom: '0.8rem' }} {...props} />,
+                li: ({ node, ...props }) => <li style={{ marginBottom: '0.3rem' }} {...props} />,
+              }}
+            >
+              {itinerary}
+            </ReactMarkdown>
+          </div>
+        )}
 
         {itinerary && (
           <ChatInterface
-            key={selectedTripId} // force remount on trip change
+            key={selectedTripId}
             location={location}
             selectedTripId={selectedTripId}
+            initialItinerary={itinerary}
             initialMessages={chatMessages}
             onUpdateItinerary={(newItinerary) => setItinerary(newItinerary)}
           />
@@ -218,14 +237,14 @@ const buttonStyle = {
   fontWeight: 'bold',
 };
 
-const itineraryStyle = {
+const markdownContainer = {
   marginTop: '2rem',
-  whiteSpace: 'pre-wrap',
   background: '#2c2c2c',
   padding: '1rem',
   borderRadius: '8px',
   overflowX: 'auto',
   color: '#ddd',
+  lineHeight: '1.6',
 };
 
 export default Itinerary;

@@ -18,7 +18,11 @@ export default async function handler(req, res) {
   try {
     const { location, startDate, endDate, userInput } = req.body;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    if (!location || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Missing required fields: location, startDate, or endDate' });
+    }
+
+    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,23 +33,45 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful travel planner assistant.',
+            content: `You are a professional travel planner. ONLY respond with a clearly structured Markdown itinerary in this format:
+
+**Day 1**
+- **Morning:** ...
+- **Afternoon:** ...
+- **Evening:** ...
+
+**Day 2**
+- **Morning:** ...
+- **Afternoon:** ...
+- **Evening:** ...
+
+- Include links to restaurants, landmarks, and experiences where possible using proper [Markdown](https://example.com) format.
+- Do NOT include greetings, summaries, or phrases like “Let me know if you want changes.” 
+- DO NOT wrap the whole thing in triple backticks. Just return markdown directly.`,
           },
           {
             role: 'user',
-            content: `Create a day-by-day itinerary for a trip to ${location} from ${startDate} to ${endDate}. Notes: ${userInput || 'none'}`,
+            content: `Create a detailed day-by-day itinerary for a trip to ${location} from ${startDate} to ${endDate}.${userInput ? ' Notes: ' + userInput : ''}`,
           },
         ],
       }),
     });
 
-    const data = await response.json();
+    const data = await openaiRes.json();
 
-    if (!data.choices || !data.choices.length) {
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid OpenAI response:', data);
       return res.status(500).json({ error: 'Invalid response from OpenAI' });
     }
 
-    return res.status(200).json({ itinerary: data.choices[0].message.content });
+    const raw = data.choices[0].message.content;
+
+    const cleaned = raw
+      .replace(/^.*?(?:\*\*Day\s*1\*\*|Day\s*1)/is, '$1') // remove preamble before Day 1
+      .replace(/(Let me know.*|Safe travels.*|Enjoy your trip.*|Please let me know.*)/gi, '') // strip fluff
+      .trim();
+
+    return res.status(200).json({ itinerary: cleaned });
   } catch (error) {
     console.error('OpenAI error:', error);
     return res.status(500).json({ error: 'Failed to generate itinerary.' });
